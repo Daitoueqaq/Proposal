@@ -46,3 +46,166 @@ def get_predicted_formulas(mass, mfRange, chemcalcURL, ppm_limit=12.5):
 
 chemcalcURL = 'https://www.chemcalc.org/chemcalc/em'
 
+
+
+######################### two masses #########################
+mfRange = 'C0-100 H0-200 N0-6 O0-10 F0-50 S0-6 Cl0-5'
+
+def extract_elements_from_mfRange(mfRange):
+    return [item.split('0-')[0] for item in mfRange.split()]
+
+def ensure_all_elements(df, elements):
+    for element in elements:
+        if element not in df.columns:
+            df[element] = 0
+    return df
+
+elements = extract_elements_from_mfRange(mfRange)
+
+old_mass = 168.98802
+new_mass = 218.98502
+
+old_formulas = get_predicted_formulas(old_mass, mfRange, chemcalcURL)
+new_formulas = get_predicted_formulas(new_mass, mfRange, chemcalcURL)
+
+old_formulas = ensure_all_elements(old_formulas, elements)
+new_formulas = ensure_all_elements(new_formulas, elements)
+
+def construct_difference_string(row, elements):
+    difference_str = []
+    for element in elements:
+        if row[element] == 1:
+            difference_str.append(element)
+        elif row[element] > 1:
+            difference_str.append(f"{element}{row[element]}")
+    return ''.join(difference_str)
+
+differences = []
+
+for new_index, new_row in new_formulas.iterrows():
+    for old_index, old_row in old_formulas.iterrows():
+        if all(new_row[element] >= old_row[element] for element in elements):
+            difference = new_row[elements] - old_row[elements]
+            diff_dict = {
+                'old_mf': old_row['mf'],
+                'new_mf': new_row['mf'],
+                'old_ppm': old_row['ppm'],
+                'new_ppm': new_row['ppm'],
+                'old_unsat': old_row['unsat'],
+                'new_unsat': new_row['unsat'],
+                **{element: difference[element] for element in elements}
+            }
+            diff_dict['Diff'] = construct_difference_string(diff_dict, elements)
+            differences.append(diff_dict)
+
+differences_df = pd.DataFrame(differences)
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+differences_df
+
+
+
+######################### three masses #########################
+mfRange = 'C0-100 H0-200 N0-6 O0-10 F0-50 S0-6' 
+
+elements = extract_elements_from_mfRange(mfRange)
+
+oldest_mass = 118.99120
+middle_mass = 168.98807 
+newest_mass = 268.98233
+
+oldest_formulas = get_predicted_formulas(oldest_mass, mfRange, chemcalcURL)
+middle_formulas = get_predicted_formulas(middle_mass, mfRange, chemcalcURL)
+newest_formulas = get_predicted_formulas(newest_mass, mfRange, chemcalcURL)
+
+oldest_formulas = ensure_all_elements(oldest_formulas, elements)
+middle_formulas = ensure_all_elements(middle_formulas, elements)
+newest_formulas = ensure_all_elements(newest_formulas, elements)
+
+trios = []
+
+for middle_index, middle_row in middle_formulas.iterrows():
+    for oldest_index, oldest_row in oldest_formulas.iterrows():
+        for newest_index, newest_row in newest_formulas.iterrows():
+            if all(middle_row[element] >= oldest_row[element] for element in elements) and \
+               all(newest_row[element] >= middle_row[element] for element in elements):
+                diff_1_to_2 = middle_row[elements] - oldest_row[elements]
+                diff_2_to_3 = newest_row[elements] - middle_row[elements]
+                trio_dict = {
+                    'first_mf': oldest_row['mf'],
+                    'second_mf': middle_row['mf'],
+                    'third_mf': newest_row['mf'],
+                    'first_ppm': oldest_row['ppm'],
+                    'second_ppm': middle_row['ppm'],
+                    'third_ppm': newest_row['ppm'],
+                    'first_unsat': oldest_row['unsat'],
+                    'second_unsat': middle_row['unsat'],
+                    'third_unsat': newest_row['unsat'],
+                    'Diff_1_to_2': construct_difference_string(diff_1_to_2, elements),
+                    'Diff_2_to_3': construct_difference_string(diff_2_to_3, elements)
+                }
+                trios.append(trio_dict)
+
+trios_df = pd.DataFrame(trios)
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+trios_df
+
+######################### four masses #########################
+mfRange = 'C0-100 H0-200 N0-6 O0-10 F0-50 S0-6'  
+
+elements = extract_elements_from_mfRange(mfRange)
+
+first_mass = 118.99120
+second_mass = 168.98807 
+third_mass = 268.98233
+fourth_mass = 368.97550
+
+first_formulas = get_predicted_formulas(first_mass, mfRange, chemcalcURL)
+second_formulas = get_predicted_formulas(second_mass, mfRange, chemcalcURL)
+third_formulas = get_predicted_formulas(third_mass, mfRange, chemcalcURL)
+fourth_formulas = get_predicted_formulas(fourth_mass, mfRange, chemcalcURL)
+
+first_formulas = ensure_all_elements(first_formulas, elements)
+second_formulas = ensure_all_elements(second_formulas, elements)
+third_formulas = ensure_all_elements(third_formulas, elements)
+fourth_formulas = ensure_all_elements(fourth_formulas, elements)
+
+quartets = []
+
+for second_index, second_row in second_formulas.iterrows():
+    for first_index, first_row in first_formulas.iterrows():
+        for third_index, third_row in third_formulas.iterrows():
+            for fourth_index, fourth_row in fourth_formulas.iterrows():
+                if all(second_row[element] >= first_row[element] for element in elements) and \
+                   all(third_row[element] >= second_row[element] for element in elements) and \
+                   all(fourth_row[element] >= third_row[element] for element in elements):
+                    diff_1_to_2 = second_row[elements] - first_row[elements]
+                    diff_2_to_3 = third_row[elements] - second_row[elements]
+                    diff_3_to_4 = fourth_row[elements] - third_row[elements]
+                    quartet_dict = {
+                        'first_mf': first_row['mf'],
+                        'second_mf': second_row['mf'],
+                        'third_mf': third_row['mf'],
+                        'fourth_mf': fourth_row['mf'],
+                        'first_ppm': first_row['ppm'],
+                        'second_ppm': second_row['ppm'],
+                        'third_ppm': third_row['ppm'],
+                        'fourth_ppm': fourth_row['ppm'],
+                        'first_unsat': first_row['unsat'],
+                        'second_unsat': second_row['unsat'],
+                        'third_unsat': third_row['unsat'],
+                        'fourth_unsat': fourth_row['unsat'],
+                        'Diff_1_to_2': construct_difference_string(diff_1_to_2, elements),
+                        'Diff_2_to_3': construct_difference_string(diff_2_to_3, elements),
+                        'Diff_3_to_4': construct_difference_string(diff_3_to_4, elements)
+                    }
+                    quartets.append(quartet_dict)
+
+quartets_df = pd.DataFrame(quartets)
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+quartets_df
